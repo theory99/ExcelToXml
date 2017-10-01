@@ -36,58 +36,91 @@ public class PoiExcel {
 			while(true){
 				System.out.println("请输入excel路径，路径格式例如：d:\\\\xx.xlsx");
 				String excelAddress=in.next();
+				String excelType = excelAddress.substring(excelAddress.lastIndexOf("."));
 				System.out.println("上传的excel地址:"+excelAddress);
 				System.out.println("正在生成xml文件......");
-				readXlsx(excelAddress);
+				if(".xls".equals(excelType)){
+					readXls(excelAddress);
+				}
+				if(".xlsx".equals(excelType)){
+					readXlsx(excelAddress);
+				}
 				System.out.println("xml文件生成结束");
 			}
 		
 	}
 	
-	 private void readXls() throws IOException{  
-		    InputStream is = new FileInputStream( "D:\\1.xls");  
-		    HSSFWorkbook hssfWorkbook = new HSSFWorkbook( is);   
-		      
-		    // 循环工作表Sheet  
-		    for(int numSheet = 0; numSheet < hssfWorkbook.getNumberOfSheets(); numSheet++){  
-		      HSSFSheet hssfSheet = hssfWorkbook.getSheetAt( numSheet);  
-		      if(hssfSheet == null){  
-		        continue;  
-		      }  
-		        
-		      // 循环行Row   
-		      for(int rowNum = 0; rowNum <= hssfSheet.getLastRowNum(); rowNum++){  
-		        HSSFRow hssfRow = hssfSheet.getRow( rowNum);  
-		        if(hssfRow == null){  
-		          continue;  
-		        }  
-		          
-		        // 循环列Cell    
-		        for(int cellNum = 0; cellNum <= hssfRow.getLastCellNum(); cellNum++){  
-		          HSSFCell hssfCell = hssfRow.getCell( cellNum);  
-		          if(hssfCell == null){  
-		            continue;  
-		          }  
-		            
-		          System.out.print("    " + getValue( hssfCell));  
-		        }  
-		        System.out.println();  
-		      }  
-		    }  
-		  }  
-		    
-		  @SuppressWarnings("static-access")  
-		  private String getValue(HSSFCell hssfCell){  
-		    if(hssfCell.getCellType() == hssfCell.CELL_TYPE_BOOLEAN){  
-		      return String.valueOf( hssfCell.getBooleanCellValue());  
-		    }else if(hssfCell.getCellType() == hssfCell.CELL_TYPE_NUMERIC){  
-		      return String.valueOf( hssfCell.getNumericCellValue());  
-		    }else{  
-		      return String.valueOf( hssfCell.getStringCellValue());  
-		    }  
-		  }  
-		  
-	private static void readXlsx(String excel) throws IOException{
+	private static void readXls(String excel) throws IOException{
+		File file = new File(excel);
+		if(!file.exists()){
+			System.out.println("excel地址错误!");
+			return ;
+		}
+		InputStream is = new FileInputStream(excel);
+		HSSFWorkbook hssfWorkbook = new HSSFWorkbook(is);
+		//循环工作表Sheet
+		for(int numSheet = 0; numSheet < hssfWorkbook.getNumberOfSheets(); numSheet++){
+			List<Entity> list = new ArrayList<Entity>();
+			HSSFSheet hssfSheet = hssfWorkbook.getSheetAt( numSheet);
+			if(hssfSheet == null){
+				continue;
+			}
+			// 循环行Row
+			for(int rowNum = 1; rowNum <= hssfSheet.getLastRowNum(); rowNum++){
+				HSSFRow hssfRow = hssfSheet.getRow( rowNum);
+				if(hssfRow == null){
+					continue;
+				}
+				//解析一行对象
+				list.add(rowForEntityXls(hssfRow));
+			}
+			createXml(list);
+		}
+	}
+
+	 private static Entity rowForEntityXls(HSSFRow hssfRow){
+		Entity entity = new Entity();
+		DecimalFormat df = new DecimalFormat("0");
+		try {
+			entity.setFpdm(df.format(hssfRow.getCell(0).getNumericCellValue()));
+		} catch (Exception e) {
+			entity.setFpdm("发票代码解析异常");
+		}
+		try {
+			entity.setFphm(df.format(hssfRow.getCell(1).getNumericCellValue()));
+		} catch (Exception e) {
+			entity.setFphm("发票号码解析异常");
+		}
+		try {
+			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
+			entity.setKprq(dateFormat.format(hssfRow.getCell(2).getDateCellValue()));
+		} catch (Exception e) {
+			entity.setKprq("开票日期解析异常");
+		}
+		try {
+			entity.setKhmc(hssfRow.getCell(4).getStringCellValue());
+		} catch (Exception e) {
+			entity.setKhmc("客户名称解析异常");
+		}
+		try {
+			entity.setKpje(hssfRow.getCell(5).getNumericCellValue()+"");
+		} catch (Exception e) {
+			entity.setKpje("开票金额解析异常");
+		}
+		try {
+			entity.setZfbz(hssfRow.getCell(6).getNumericCellValue()==1?"正常":"作废");
+		} catch (Exception e) {
+			entity.setZfbz("正常");
+		}
+		try {
+			entity.setSl(df.format(hssfRow.getCell(8).getNumericCellValue()));
+		} catch (Exception e) {
+			entity.setSl(1+"");
+		}
+		return entity;
+	 }
+	 
+	 private static void readXlsx(String excel) throws IOException{
 		File file = new File(excel);
 		if(!file.exists()){
 			System.out.println("excel地址错误!");
@@ -121,12 +154,12 @@ public class PoiExcel {
 		}
 	}
 	
-	/**
+	 /**
 	 * 行对象转实体对象
 	 * @param xssfRow
 	 * @return
 	 */
-	private static Entity rowForEntity(XSSFRow xssfRow){
+	 private static Entity rowForEntity(XSSFRow xssfRow){
 		Entity entity = new Entity();
 		DecimalFormat df = new DecimalFormat("0");
 		try {
@@ -167,7 +200,7 @@ public class PoiExcel {
 		try {
 			entity.setZfbz(xssfRow.getCell(6).getNumericCellValue()==1?"正常":"作废");
 		} catch (Exception e) {
-			entity.setZfbz("1");
+			entity.setZfbz("正常");
 		}
 		try {
 			entity.setSl(df.format(xssfRow.getCell(8).getNumericCellValue()));//数量
@@ -182,7 +215,7 @@ public class PoiExcel {
 	 * @param list
 	 * @throws IOException
 	 */
-	private static void  createXml(List<Entity> list) throws IOException{
+	 private static void  createXml(List<Entity> list) throws IOException{
 		Element root = DocumentHelper.createElement("ROOT");
 		Document document = DocumentHelper.createDocument(root);
 		Element element1 = root.addElement("UPINVINFO").addAttribute("class", "UPINVINFO");
@@ -216,14 +249,14 @@ public class PoiExcel {
 		System.out.println("生成的xml地址："+fileName);
 		xmlWriter.write(document);
 		xmlWriter.close();
-	}
+	 }
 	
 	/**
 	 * 递归判断文件是否存在
 	 * @param i
 	 * @param fileName
 	 */
-	private static String fileExist(int i){
+	 private static String fileExist(int i){
 		Date date = new Date();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
 		String fileName = "d:\\TAX_FPXX_"+dateFormat.format(date)+"_330201744993850_"+i+".xml";
@@ -234,5 +267,5 @@ public class PoiExcel {
 			return fileExist(i);
 		}
 		return fileName;
-	}
+	 }
 }
