@@ -44,7 +44,6 @@ public class PoiExcel {
 		
 	}
 	
-	
 	 private void readXls() throws IOException{  
 		    InputStream is = new FileInputStream( "D:\\1.xls");  
 		    HSSFWorkbook hssfWorkbook = new HSSFWorkbook( is);   
